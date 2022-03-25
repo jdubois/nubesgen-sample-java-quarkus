@@ -1,50 +1,45 @@
 terraform {
   required_providers {
     azurecaf = {
-      source = "aztfmod/azurecaf"
-      version = "1.2.6"
+      source  = "aztfmod/azurecaf"
+      version = "1.2.16"
     }
   }
 }
 
 resource "azurecaf_name" "app_service_plan" {
-  name            = var.application_name
-  resource_type   = "azurerm_app_service_plan"
-  suffixes        = [var.environment]
+  name          = var.application_name
+  resource_type = "azurerm_app_service_plan"
+  suffixes      = [var.environment]
 }
 
 # This creates the plan that the service use
-resource "azurerm_app_service_plan" "application" {
+resource "azurerm_service_plan" "application" {
   name                = azurecaf_name.app_service_plan.result
   resource_group_name = var.resource_group
   location            = var.location
 
-  kind     = "Linux"
-  reserved = true
+  sku_name = "B1"
+  os_type  = "Linux"
 
   tags = {
     "environment"      = var.environment
     "application-name" = var.application_name
   }
-
-  sku {
-    tier = "Basic"
-    size = "B1"
-  }
 }
 
 resource "azurecaf_name" "app_service" {
-  name            = var.application_name
-  resource_type   = "azurerm_app_service"
-  suffixes        = [var.environment]
+  name          = var.application_name
+  resource_type = "azurerm_app_service"
+  suffixes      = [var.environment]
 }
 
 # This creates the service definition
-resource "azurerm_app_service" "application" {
+resource "azurerm_linux_web_app" "application" {
   name                = azurecaf_name.app_service.result
   resource_group_name = var.resource_group
   location            = var.location
-  app_service_plan_id = azurerm_app_service_plan.application.id
+  service_plan_id     = azurerm_service_plan.application.id
   https_only          = true
 
   tags = {
@@ -53,7 +48,11 @@ resource "azurerm_app_service" "application" {
   }
 
   site_config {
-    linux_fx_version = "JAVA|11-java11"
+    application_stack {
+      java_server         = "JAVA"
+      java_server_version = "11"
+      java_version        = "java11"
+    }
     always_on        = true
     ftps_state       = "FtpsOnly"
   }
